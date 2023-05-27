@@ -1,6 +1,7 @@
 provider "aws" {
-
-  region = "us-east-1"
+  access_key = "AKIATR63PUBIFKNGKGC3"
+  secret_key = "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"
+  region     = "us-east-1"
 }
 
 # ----- LAMBDA1 -----
