@@ -5,12 +5,13 @@ provider "aws" {
 # ----- LAMBDA1 -----
 data "aws_iam_policy_document" "lambda_policy" {
   statement {
-    effect  = "Allow"
-    actions = ["sts:AssumeRole"]
+    effect = "Allow"
+
     principals {
       type        = "Service"
       identifiers = ["lambda.amazonaws.com"]
     }
+    actions = ["sts:AssumeRole"]
   }
 }
 
@@ -29,6 +30,11 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AWSLambda_FullAccess"
 }
 
+# data "archive_file" "lambda" {
+#   type        = "zip"
+#   source_file = file("python/funcao.py")
+#   output_path = file("python/lambda_function_payload.zip")
+# }
 
 # data "archive_file" "zip_python_code" {
 #   type        = "zip"
@@ -37,17 +43,46 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution_role_policy" {
 # }
 
 resource "aws_lambda_function" "lambda-pipelineC" {
-  filename      = "${path.module}/python/funcao.zip"
+  filename      = "${path.module}/python/funcao.zip" # file("python/funcao.zip")
   function_name = "lambda-pipelineC"
   role          = aws_iam_role.lambda_role.arn
   handler       = "funcao.lambda_handler" # <nome_do_arquivo.py>.<nome_da_função_dentro_do_arquivo>
-  runtime       = "python3.8"
+  runtime       = "python3.10"
+}
+
+resource "aws_iam_policy" "lambda_invoke_policy" {
+  name        = "lambda-invoke-policy"
+  description = "Policy to allow lambda:InvokeFunction"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "lambda:InvokeFunction",
+      "Resource": "${aws_iam_role.lambda_role.arn}"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_invoke_attachment" {
+  role       = aws_iam_role.pipeline_role.name
+  policy_arn = aws_iam_policy.lambda_invoke_policy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_in" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = aws_iam_policy.lambda_invoke_policy.arn
 }
 
 # ----- S31 -----
 # Criação do bucket do S3 para o CodePipeline ok
 resource "aws_s3_bucket" "pipeline_bucket" {
-  bucket = "my-pipeline-bucketykaro" # Substitua pelo nome desejado
+  bucket        = "my-pipeline-bucketykaro-8797" # Substitua pelo nome desejado
+  force_destroy = true
 }
 
 # resource "aws_s3_bucket_versioning" "versioning_example" {
@@ -60,7 +95,7 @@ resource "aws_s3_bucket" "pipeline_bucket" {
 # ----- codecommit1 -----
 # Criação do repositório do CodeCommit
 resource "aws_codecommit_repository" "my_repo" {
-  repository_name = "my-repositorio1"
+  repository_name = "my-repo59870707"
   default_branch  = "master"
 }
 
@@ -97,15 +132,16 @@ resource "aws_codebuild_project" "my_project" {
 
   }
 
-  #   logs_config {
-  #     cloudwatch_logs {
-  #       group_name  = "log-group"
-  #       stream_name = "log-stream"
-  #     }
+  logs_config {
+    cloudwatch_logs {
+      group_name  = "log-group"
+      stream_name = "log-stream"
+    }
+  }
 
   source {
     type            = "CODEPIPELINE"
-    buildspec       = "buildspec.yml" # Substitua pelo caminho do arquivo buildspec.yml do seu projeto
+    buildspec       = file("modules/buildspec.yml") # Substitua pelo caminho do arquivo buildspec.yml do seu projeto
     git_clone_depth = 1
   }
 }
@@ -130,6 +166,202 @@ resource "aws_iam_role" "codebuild_role" {
 }
 EOF
 }
+
+# Output the CodeBuild IAM role
+output "codebuild_iam_role_arn" {
+  value = aws_iam_role.codebuild_role.arn
+}
+
+# Create an IAM role policy for CodeBuild to use implicitly
+resource "aws_iam_role_policy" "codebuild_iam_role_policy" {
+  name = "policy-codebuide-role"
+  role = aws_iam_role.codebuild_role.name
+
+
+  policy = <<POLICY
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": [
+        "*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:*"
+      ],
+      "Resource": [
+        "${aws_s3_bucket.pipeline_bucket.arn}",
+        "${aws_s3_bucket.pipeline_bucket.arn}/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "codecommit:BatchGet*",
+        "codecommit:BatchDescribe*",
+        "codecommit:Describe*",
+        "codecommit:EvaluatePullRequestApprovalRules",
+        "codecommit:Get*",
+        "codecommit:List*",
+        "codecommit:GitPull"
+      ],
+      "Resource": "${aws_codecommit_repository.my_repo.arn}"
+    },
+    {
+      "Action": [
+          "lambda:GetAlias",
+          "lambda:ListVersionsByFunction"
+      ],
+      "Effect": "Allow",
+      "Resource": [
+          "*"
+      ]
+    },
+    {
+      "Action": [
+          "codedeploy:*"
+      ],
+      "Effect": "Allow",
+      "Resource": [
+          "*"
+      ]
+    },
+    {
+      "Action": [
+          "codebuild:CreateReportGroup",
+          "codebuild:CreateReport",
+          "codebuild:UpdateReport",
+          "codebuild:BatchPutTestCases",
+          "codebuild:BatchPutCodeCoverages"
+      ],
+      "Effect": "Allow",
+      "Resource": [
+          "*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iam:Get*",
+        "iam:List*"
+      ],
+      "Resource": "${aws_iam_role.codebuild_role.arn}"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Resource": "${aws_iam_role.codebuild_role.arn}"
+    }
+  ]
+}
+POLICY
+}
+
+# # Create an IAM role policy for CodeBuild to use implicitly
+# resource "aws_iam_role_policy" "codebuild_iam_role_policy" {
+#   name = "policy-codebuide-role"
+#   role = aws_iam_role.codebuild_role.name
+
+
+#   policy = <<POLICY
+# {
+#   "Version": "2012-10-17",
+#   "Statement": [
+#     {
+#       "Effect": "Allow",
+#       "Action": [
+#         "logs:CreateLogGroup",
+#         "logs:CreateLogStream",
+#         "logs:PutLogEvents"
+#       ],
+#       "Resource": [
+#         "*"
+#       ]
+#     },
+#     {
+#       "Effect": "Allow",
+#       "Action": [
+#         "s3:PutObject",
+#         "s3:GetObject",
+#         "s3:GetObjectVersion",
+#         "s3:GetBucketAcl",
+#         "s3:GetBucketLocation"
+#       ],
+#       "Resource": [
+#         "${aws_s3_bucket.pipeline_bucket.arn}",
+#       ]
+#     },
+#     {
+#       "Effect": "Allow",
+#       "Action": [
+#         "codecommit:BatchGet*",
+#         "codecommit:BatchDescribe*",
+#         "codecommit:Describe*",
+#         "codecommit:EvaluatePullRequestApprovalRules",
+#         "codecommit:Get*",
+#         "codecommit:List*",
+#         "codecommit:GitPull"
+#       ],
+#       "Resource": "${aws_codecommit_repository.my_repo.arn}"
+#     },
+#     {
+#       "Action": [
+#           "lambda:GetAlias",
+#           "lambda:ListVersionsByFunction"
+#       ],
+#       "Effect": "Allow",
+#       "Resource": [
+#           "*"
+#       ]
+#     },
+#     {
+#       "Action": [
+#           "cloudformation:GetTemplate"
+#       ],
+#       "Effect": "Allow",
+#       "Resource": [
+#           "*"
+#       ]
+#     },
+#     {
+#       "Action": [
+#           "codebuild:CreateReportGroup",
+#           "codebuild:CreateReport",
+#           "codebuild:UpdateReport",
+#           "codebuild:BatchPutTestCases",
+#           "codebuild:BatchPutCodeCoverages"
+#       ],
+#       "Effect": "Allow",
+#       "Resource": [
+#           "*"
+#       ]
+#     },
+#     {
+#       "Effect": "Allow",
+#       "Action": [
+#         "iam:Get*",
+#         "iam:List*"
+#       ],
+#       "Resource": "${aws_iam_role.codebuild_role.arn}"
+#     },
+#     {
+#       "Effect": "Allow",
+#       "Action": "sts:AssumeRole",
+#       "Resource": "${aws_iam_role.codebuild_role.arn}"
+#     }
+#   ]
+# }
+# POLICY
+# }
 
 # ----- codedeploy1 -----
 # Criação do aplicativo do CodeDeploy

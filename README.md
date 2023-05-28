@@ -132,7 +132,7 @@ Será requisitado em sua máquina sua conta e senha da AWS para que seja sincron
 
 # Importante
 
-Se você não clonar a etapa de CodeCommit do CodePipeline não vai funcionar 
+## Mesmo clonanando o repositório e necessário que seja feito um commit a partir da sua máquina, se não a etapa de CodeCommit do CodePipeline não vai funcionar !
 ![Exemplo de imagem](imagens/errocommit.png)
 
 
@@ -149,6 +149,17 @@ def lambda_handler(event, context):
     }
 
 ```
+## Se você não configurou sua máquina com codecommit da AWS, a seguinte solicitação irá aparecer quando você for dar git push:
+![Exemplo de imagem](imagens/credencialpush.png)
+
+# Para achar essa informação devemos ir no console em Credenciais de segurança que está em IAM>usuario>(seu user):
+
+## Procure por: *Credenciais HTTPS do Git para o AWS CodeCommit* 
+
+![Exemplo de imagem](imagens/credencialparaaws.png)
+
+# Cole suas credenciais onde foram solicitadas e seu commit irá funcionar
+
 ## Ao clonar o repositório cria e colocar um código vemos que uma nova branch foi criada apos git push:
 ![Exemplo de imagem](imagens/gitpush.png)
 
@@ -174,7 +185,7 @@ Podemos pesquisar no console da AWS por CodeBuild e veremos que o serviço foi c
 
 ## Ao clicar em action execution failed:
 
-![Exemplo de imagem](imagens/errobuild.png)
+![Exemplo de imagem](imagens/bugbuild.png)
 
 Ao pesquisar pelo erro tive obtive a seguinte informação que pode ser a causa da não conclusão desta etapa no CodePipeline:
 
@@ -193,8 +204,19 @@ Ao que parece se trata de alguma configuração da conta.
 ## Terraform apply
 ![Exemplo de imagem](imagens/applycomplete.png)
 
+## Terraform destroy
+![Exemplo de imagem](imagens/destroy.png)
+
 ## Outros serviços 
 
 ![Exemplo de imagem](imagens/lambda.png)
 
 Foi enviado um email para os professores explicando sobre o erro na etapa de build que pode ser da conta AWS.
+
+# Agora de posse de uma conta com permissão para executar build
+![Exemplo de imagem](imagens/commitebuild.png)
+
+# CodeBuild Funciona
+
+![Exemplo de imagem](imagens/buildfunciona.png)
+

@@ -10,4 +10,6 @@ phases:
   post_build:
     commands:
       - echo "Running the Python function"
-      - python lambda_handler.py
+      #- python3 lambda_handler.py
+
+
