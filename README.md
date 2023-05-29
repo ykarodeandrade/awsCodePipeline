@@ -1,5 +1,9 @@
 # awsCodePipeline
 
+https://www.youtube.com/watch?v=uRdCN7F4IEA
+
+link: projeto funcionando
+
 # Documentação Projeto da disciplina de Cloud – AWS Terraform
 
 Este projeto consiste em criar uma infraestrutura capaz de provisionar o serviço de CodePipeline da AWS. 
@@ -219,4 +223,3 @@ Foi enviado um email para os professores explicando sobre o erro na etapa de bui
 # CodeBuild Funciona
 
 ![Exemplo de imagem](imagens/buildfunciona.png)
-

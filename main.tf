@@ -87,7 +87,7 @@ resource "aws_iam_role_policy_attachment" "lambda_deploy" {
 # ----- S31 -----
 # Criação do bucket do S3 para o CodePipeline ok
 resource "aws_s3_bucket" "pipeline_bucket" {
-  bucket        = "my-pipeline-bucketykaro-876087" # Substitua pelo nome desejado
+  bucket        = "my-pipeline-bucketykaro-876035787" # Substitua pelo nome desejado
   force_destroy = true
 }
 
@@ -101,7 +101,7 @@ resource "aws_s3_bucket" "pipeline_bucket" {
 # ----- codecommit1 -----
 # Criação do repositório do CodeCommit
 resource "aws_codecommit_repository" "my_repo" {
-  repository_name = "my-repo978"
+  repository_name = "my-repo978096"
   default_branch  = "master"
 }
 
