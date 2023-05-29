@@ -25,9 +25,9 @@ resource "aws_iam_role_policy_attachment" "lambda_s3_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_basic_execution_role_policy" {
+resource "aws_iam_role_policy_attachment" "lambda_codepipeline_role_policy" {
   role       = aws_iam_role.lambda_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AWSLambda_FullAccess"
+  policy_arn = "arn:aws:iam::aws:policy/AWSCodePipeline_FullAccess"
 }
 
 # data "archive_file" "lambda" {
@@ -39,12 +39,12 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution_role_policy" {
 # data "archive_file" "zip_python_code" {
 #   type        = "zip"
 #   source_dir  = "${path.module}/python/"
-#   output_path = "${path.module}/python/lambda-pipelineC.zip"
+#   output_path = "${path.module}/python/lambda_pipelineC.zip"
 # }
 
-resource "aws_lambda_function" "lambda-pipelineC" {
+resource "aws_lambda_function" "lambda_pipelineC" {
   filename      = "${path.module}/python/funcao.zip" # file("python/funcao.zip")
-  function_name = "lambda-pipelineC"
+  function_name = "lambda_pipelineC"
   role          = aws_iam_role.lambda_role.arn
   handler       = "funcao.lambda_handler" # <nome_do_arquivo.py>.<nome_da_função_dentro_do_arquivo>
   runtime       = "python3.10"
@@ -68,7 +68,7 @@ resource "aws_iam_policy" "lambda_invoke_policy" {
 EOF
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_invoke_attachment" {
+resource "aws_iam_role_policy_attachment" "lambda_pipeline" {
   role       = aws_iam_role.pipeline_role.name
   policy_arn = aws_iam_policy.lambda_invoke_policy.arn
 }
@@ -78,10 +78,16 @@ resource "aws_iam_role_policy_attachment" "lambda_in" {
   policy_arn = aws_iam_policy.lambda_invoke_policy.arn
 }
 
+
+resource "aws_iam_role_policy_attachment" "lambda_deploy" {
+  role       = aws_iam_role.codedeploy_role.name
+  policy_arn = aws_iam_policy.lambda_invoke_policy.arn
+}
+
 # ----- S31 -----
 # Criação do bucket do S3 para o CodePipeline ok
 resource "aws_s3_bucket" "pipeline_bucket" {
-  bucket        = "my-pipeline-bucketykaro-8797" # Substitua pelo nome desejado
+  bucket        = "my-pipeline-bucketykaro-876087" # Substitua pelo nome desejado
   force_destroy = true
 }
 
@@ -95,7 +101,7 @@ resource "aws_s3_bucket" "pipeline_bucket" {
 # ----- codecommit1 -----
 # Criação do repositório do CodeCommit
 resource "aws_codecommit_repository" "my_repo" {
-  repository_name = "my-repo59870707"
+  repository_name = "my-repo978"
   default_branch  = "master"
 }
 
@@ -365,23 +371,80 @@ POLICY
 
 # ----- codedeploy1 -----
 # Criação do aplicativo do CodeDeploy
+# resource "aws_codedeploy_app" "my_app" {
+#   compute_platform = "Lambda" # pode ser que tenha que colocar Lambda
+#   name             = "my-app" # Substitua pelo nome desejado
+# }
+
 resource "aws_codedeploy_app" "my_app" {
-  compute_platform = "Server" # pode ser que tenha que colocar Lambda
-  name             = "my-app" # Substitua pelo nome desejado
+  name = "my-lambda-app"
 }
 
-# Criação do grupo de implantação do CodeDeploy
 resource "aws_codedeploy_deployment_group" "my_deployment_group" {
   app_name              = aws_codedeploy_app.my_app.name
-  deployment_group_name = "my-deployment-group" # Substitua pelo nome desejado
-  service_role_arn      = aws_iam_role.codedeploy_role.arn
-  # no gpt tinha e na documentacao nao tem 
-  #deployment_config_name = "CodeDeployDefault.AllAtOnce"
+  deployment_group_name = "my-lambda-deployment-group"
+  service_role_arn      = aws_iam_role.codedeploy_role.arn #"<ARN_do_role_do_codedeploy>"
+
+  deployment_style {
+    deployment_type   = "IN_PLACE"
+    deployment_option = "WITHOUT_TRAFFIC_CONTROL"
+  }
+
   auto_rollback_configuration {
     enabled = true
     events  = ["DEPLOYMENT_FAILURE"]
   }
+
+  # trigger_configuration {
+  #   trigger_name       = "my-lambda-trigger"
+  #   trigger_target_arn = aws_lambda_function.lambda_pipelineC.arn
+  #   trigger_events     = ["DeploymentSuccess"]
+  # }
 }
+
+
+# # Criação do grupo de implantação do CodeDeploy
+# resource "aws_codedeploy_deployment_group" "my_deployment_group" {
+#   app_name              = aws_codedeploy_app.my_app.name
+#   deployment_group_name = "my-deployment-group" # Substitua pelo nome desejado
+#   service_role_arn      = aws_iam_role.codedeploy_role.arn
+#   # no gpt tinha e na documentacao nao tem 
+#   #deployment_config_name = "CodeDeployDefault.AllAtOnce"
+#   auto_rollback_configuration {
+#     enabled = true
+#     events  = ["DEPLOYMENT_FAILURE"]
+#   }
+# }
+
+resource "aws_iam_role_policy" "codedeploy_policy" {
+  name = "codedeploy-lambda-invoke-policy"
+  role = aws_iam_role.pipeline_role.name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "AllowInvokeLambdaFunction"
+        Effect   = "Allow"
+        Action   = ["lambda:InvokeFunction"]
+        Resource = aws_lambda_function.lambda_pipelineC.arn
+      },
+      {
+        Sid    = "AllowCodeDeployAccess"
+        Effect = "Allow"
+        Action = [
+          "codedeploy:GetDeployment",
+          "codedeploy:GetDeploymentConfig",
+          "codedeploy:RegisterApplicationRevision",
+          "codedeploy:CreateDeployment",
+          "codedeploy:GetApplicationRevision"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 
 resource "aws_iam_role" "codedeploy_role" {
   name = "codedeploy-role"
@@ -401,6 +464,8 @@ resource "aws_iam_role" "codedeploy_role" {
 }
 EOF
 }
+
+
 
 # Criação da função do CodePipeline
 # a policy nao esta redonda
@@ -540,7 +605,7 @@ resource "aws_codepipeline" "my_pipeline" {
       version = "1"
 
       configuration = {
-        FunctionName = "my-lambda-function"
+        FunctionName = "lambda_pipelineC"
         #DeploymentGroupName = "additional-parameters"
       }
     }
