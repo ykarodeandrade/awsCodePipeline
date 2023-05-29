@@ -1,4 +1,6 @@
 provider "aws" {
+ # access_key = "" # pode colocar as credenciais via set key
+ # secret_key = "" # apague sua credencial logo depois de usar o código
   region = "us-east-1"
 }
 
@@ -30,23 +32,13 @@ resource "aws_iam_role_policy_attachment" "lambda_codepipeline_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AWSCodePipeline_FullAccess"
 }
 
-# data "archive_file" "lambda" {
-#   type        = "zip"
-#   source_file = file("python/funcao.py")
-#   output_path = file("python/lambda_function_payload.zip")
-# }
 
-# data "archive_file" "zip_python_code" {
-#   type        = "zip"
-#   source_dir  = "${path.module}/python/"
-#   output_path = "${path.module}/python/lambda_pipelineC.zip"
-# }
 
 resource "aws_lambda_function" "lambda_pipelineC" {
-  filename      = "${path.module}/python/funcao.zip" # file("python/funcao.zip")
+  filename      = "${path.module}/python/funcao.zip" 
   function_name = "lambda_pipelineC"
   role          = aws_iam_role.lambda_role.arn
-  handler       = "funcao.lambda_handler" # <nome_do_arquivo.py>.<nome_da_função_dentro_do_arquivo>
+  handler       = "funcao.lambda_handler" 
   runtime       = "python3.10"
 }
 
@@ -87,16 +79,9 @@ resource "aws_iam_role_policy_attachment" "lambda_deploy" {
 # ----- S31 -----
 # Criação do bucket do S3 para o CodePipeline ok
 resource "aws_s3_bucket" "pipeline_bucket" {
-  bucket        = "my-pipeline-bucketykaro-876035787" # Substitua pelo nome desejado
+  bucket        = "my-pipeline-bucketykaro-876035787"
   force_destroy = true
 }
-
-# resource "aws_s3_bucket_versioning" "versioning_example" {
-#   bucket = aws_s3_bucket.pipeline_bucket.id
-#   versioning_configuration {
-#     status = "Enabled"
-#   }
-# }
 
 # ----- codecommit1 -----
 # Criação do repositório do CodeCommit
@@ -106,15 +91,10 @@ resource "aws_codecommit_repository" "my_repo" {
 }
 
 
-# resource "aws_codecommit_branch" "my_branch" {
-#   repository_name = aws_codecommit_repository.my_repo.repository_name
-#   branch_name     = "my-branch"
-# }
-
 # ----- codebuild1 -----
 # Criação do projeto do CodeBuild
 resource "aws_codebuild_project" "my_project" {
-  name          = "my-project" # Substitua pelo nome desejado
+  name          = "my-project" 
   description   = "My CodeBuild project"
   build_timeout = 60
 
@@ -123,7 +103,7 @@ resource "aws_codebuild_project" "my_project" {
   artifacts {
     type = "CODEPIPELINE"
   }
-  #   esta na documentacao nao sei se precisa
+  
   cache {
     type     = "S3"
     location = aws_s3_bucket.pipeline_bucket.bucket
@@ -131,7 +111,7 @@ resource "aws_codebuild_project" "my_project" {
 
   environment {
     compute_type                = "BUILD_GENERAL1_SMALL"
-    image                       = "aws/codebuild/standard:4.0" # image                       = "aws/codebuild/standard:1.0"
+    image                       = "aws/codebuild/standard:4.0" 
     type                        = "LINUX_CONTAINER"
     image_pull_credentials_type = "CODEBUILD"
     #privileged_mode             = true
@@ -156,7 +136,7 @@ resource "aws_codebuild_project" "my_project" {
 # Criação da função do CodeBuild
 resource "aws_iam_role" "codebuild_role" {
   name = "codebuild-role"
-  # doc// assume_role_policy = data.aws_iam_policy_document.assume_role.json
+
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -173,12 +153,11 @@ resource "aws_iam_role" "codebuild_role" {
 EOF
 }
 
-# Output the CodeBuild IAM role
 output "codebuild_iam_role_arn" {
   value = aws_iam_role.codebuild_role.arn
 }
 
-# Create an IAM role policy for CodeBuild to use implicitly
+
 resource "aws_iam_role_policy" "codebuild_iam_role_policy" {
   name = "policy-codebuide-role"
   role = aws_iam_role.codebuild_role.name
@@ -272,109 +251,7 @@ resource "aws_iam_role_policy" "codebuild_iam_role_policy" {
 POLICY
 }
 
-# # Create an IAM role policy for CodeBuild to use implicitly
-# resource "aws_iam_role_policy" "codebuild_iam_role_policy" {
-#   name = "policy-codebuide-role"
-#   role = aws_iam_role.codebuild_role.name
 
-
-#   policy = <<POLICY
-# {
-#   "Version": "2012-10-17",
-#   "Statement": [
-#     {
-#       "Effect": "Allow",
-#       "Action": [
-#         "logs:CreateLogGroup",
-#         "logs:CreateLogStream",
-#         "logs:PutLogEvents"
-#       ],
-#       "Resource": [
-#         "*"
-#       ]
-#     },
-#     {
-#       "Effect": "Allow",
-#       "Action": [
-#         "s3:PutObject",
-#         "s3:GetObject",
-#         "s3:GetObjectVersion",
-#         "s3:GetBucketAcl",
-#         "s3:GetBucketLocation"
-#       ],
-#       "Resource": [
-#         "${aws_s3_bucket.pipeline_bucket.arn}",
-#       ]
-#     },
-#     {
-#       "Effect": "Allow",
-#       "Action": [
-#         "codecommit:BatchGet*",
-#         "codecommit:BatchDescribe*",
-#         "codecommit:Describe*",
-#         "codecommit:EvaluatePullRequestApprovalRules",
-#         "codecommit:Get*",
-#         "codecommit:List*",
-#         "codecommit:GitPull"
-#       ],
-#       "Resource": "${aws_codecommit_repository.my_repo.arn}"
-#     },
-#     {
-#       "Action": [
-#           "lambda:GetAlias",
-#           "lambda:ListVersionsByFunction"
-#       ],
-#       "Effect": "Allow",
-#       "Resource": [
-#           "*"
-#       ]
-#     },
-#     {
-#       "Action": [
-#           "cloudformation:GetTemplate"
-#       ],
-#       "Effect": "Allow",
-#       "Resource": [
-#           "*"
-#       ]
-#     },
-#     {
-#       "Action": [
-#           "codebuild:CreateReportGroup",
-#           "codebuild:CreateReport",
-#           "codebuild:UpdateReport",
-#           "codebuild:BatchPutTestCases",
-#           "codebuild:BatchPutCodeCoverages"
-#       ],
-#       "Effect": "Allow",
-#       "Resource": [
-#           "*"
-#       ]
-#     },
-#     {
-#       "Effect": "Allow",
-#       "Action": [
-#         "iam:Get*",
-#         "iam:List*"
-#       ],
-#       "Resource": "${aws_iam_role.codebuild_role.arn}"
-#     },
-#     {
-#       "Effect": "Allow",
-#       "Action": "sts:AssumeRole",
-#       "Resource": "${aws_iam_role.codebuild_role.arn}"
-#     }
-#   ]
-# }
-# POLICY
-# }
-
-# ----- codedeploy1 -----
-# Criação do aplicativo do CodeDeploy
-# resource "aws_codedeploy_app" "my_app" {
-#   compute_platform = "Lambda" # pode ser que tenha que colocar Lambda
-#   name             = "my-app" # Substitua pelo nome desejado
-# }
 
 resource "aws_codedeploy_app" "my_app" {
   name = "my-lambda-app"
@@ -383,7 +260,7 @@ resource "aws_codedeploy_app" "my_app" {
 resource "aws_codedeploy_deployment_group" "my_deployment_group" {
   app_name              = aws_codedeploy_app.my_app.name
   deployment_group_name = "my-lambda-deployment-group"
-  service_role_arn      = aws_iam_role.codedeploy_role.arn #"<ARN_do_role_do_codedeploy>"
+  service_role_arn      = aws_iam_role.codedeploy_role.arn 
 
   deployment_style {
     deployment_type   = "IN_PLACE"
@@ -395,26 +272,11 @@ resource "aws_codedeploy_deployment_group" "my_deployment_group" {
     events  = ["DEPLOYMENT_FAILURE"]
   }
 
-  # trigger_configuration {
-  #   trigger_name       = "my-lambda-trigger"
-  #   trigger_target_arn = aws_lambda_function.lambda_pipelineC.arn
-  #   trigger_events     = ["DeploymentSuccess"]
-  # }
+  
 }
 
 
-# # Criação do grupo de implantação do CodeDeploy
-# resource "aws_codedeploy_deployment_group" "my_deployment_group" {
-#   app_name              = aws_codedeploy_app.my_app.name
-#   deployment_group_name = "my-deployment-group" # Substitua pelo nome desejado
-#   service_role_arn      = aws_iam_role.codedeploy_role.arn
-#   # no gpt tinha e na documentacao nao tem 
-#   #deployment_config_name = "CodeDeployDefault.AllAtOnce"
-#   auto_rollback_configuration {
-#     enabled = true
-#     events  = ["DEPLOYMENT_FAILURE"]
-#   }
-# }
+
 
 resource "aws_iam_role_policy" "codedeploy_policy" {
   name = "codedeploy-lambda-invoke-policy"
@@ -468,7 +330,6 @@ EOF
 
 
 # Criação da função do CodePipeline
-# a policy nao esta redonda
 resource "aws_iam_role" "pipeline_role" {
   name               = "codepipeline-role"
   assume_role_policy = <<EOF
@@ -540,7 +401,7 @@ data "aws_iam_policy_document" "codepipeline" {
 
     resources = [
       aws_codebuild_project.my_project.arn,
-      #aws_codebuild_project.terraform_plan.arn,
+      
     ]
   }
 }
@@ -548,7 +409,7 @@ data "aws_iam_policy_document" "codepipeline" {
 # ----- codedeploy1 -----
 # Criação do pipeline do CodePipeline
 resource "aws_codepipeline" "my_pipeline" {
-  name     = "my-pipeline" # Substitua pelo nome desejado
+  name     = "my-pipeline" 
   role_arn = aws_iam_role.pipeline_role.arn
 
   artifact_store {
@@ -560,16 +421,15 @@ resource "aws_codepipeline" "my_pipeline" {
     name = "Clone"
 
     action {
-      name     = "SourceAction" # doc name             = "Source"
+      name     = "SourceAction" 
       category = "Source"
       owner    = "AWS"
       provider = "CodeCommit"
-      #branch           = "Master"
       version          = "1"
-      output_artifacts = ["source_output"] # gpt output_artifacts = ["SourceOutput"]
+      output_artifacts = ["source_output"] 
 
       configuration = {
-        RepositoryName = aws_codecommit_repository.my_repo.repository_name # esta diferente da documentacao
+        RepositoryName = aws_codecommit_repository.my_repo.repository_name   
         BranchName     = "master"
       }
     }
@@ -579,7 +439,7 @@ resource "aws_codepipeline" "my_pipeline" {
     name = "Build"
 
     action {
-      name             = "Build" # gpt BuildAction
+      name             = "Build" 
       category         = "Build"
       owner            = "AWS"
       provider         = "CodeBuild"
@@ -606,29 +466,8 @@ resource "aws_codepipeline" "my_pipeline" {
 
       configuration = {
         FunctionName = "lambda_pipelineC"
-        #DeploymentGroupName = "additional-parameters"
+        
       }
     }
   }
 }
-
-
-
-# stage {
-#     name = "Deploy"
-
-#     action {
-#       name            = "DeployAction"
-#       category        = "Deploy"
-#       owner           = "AWS"
-#       provider        = "CodeDeploy"
-#       input_artifacts = ["source_output"]
-#       # output_artifacts = ["build_output"]
-#       version = "1"
-
-#       configuration = {
-#         ApplicationName     = aws_codedeploy_app.my_app.name
-#         DeploymentGroupName = aws_codedeploy_deployment_group.my_deployment_group.deployment_group_name
-#       }
-#     }
-#   }

@@ -1,8 +1,11 @@
 # awsCodePipeline
 
+![Exemplo de imagem](imagens/codepipeline.png)
+
+
 https://www.youtube.com/watch?v=uRdCN7F4IEA
 
-link: projeto funcionando
+# link: projeto funcionando
 
 # Documentação Projeto da disciplina de Cloud – AWS Terraform
 
@@ -14,16 +17,42 @@ Finalidade: O objetivo deste projeto é criar uma infraestrutura necessária par
 # Diagrama imagem:
 
 De acordo com o diagrama podemos observar que o CodePipeline é composto por outros serviços também nativos da AWS. Sendo eles o CodeCommit, CodeBuild, CodeDeploy, S3 e Lambda. 
-A seguir irei explicar sobre cada um destes serviços de maneira individual e, por fim, explicar como cada serviço está integrado para constituir o CodePipeline.
+A seguir irei explicar sobre cada um destes serviços de maneira individual e explicar como cada serviço está integrado para constituir o CodePipeline.
+
+# AWS S3
+
 AWS S3 para manter quaisquer artefatos resultantes de um estágio de construção bem-sucedido, para uso posterior e posteridade.
+
+## Observação
+
+É importante nome o s3 com um nome exclusivo.
+
+```
+# ----- S31 -----
+# Criação do bucket do S3 para o CodePipeline
+resource "aws_s3_bucket" "pipeline_bucket" {
+  bucket        = "my-pipeline-bucketykaro-876035787"
+}
+
+```
+
+# Lambda
 
 O AWS Lambda é um serviço sem servidor que permite que você execute código sem se preocupar com a infraestrutura subjacente. Ele oferece escalabilidade automática, baixa latência de inicialização e integração com outros serviços da AWS, tornando-o uma escolha popular para criar aplicativos e serviços altamente flexíveis, eficientes e dimensionáveis.
 
+# CodeCommit
+
 AWS CodeCommit atua como um servidor git, fornecendo repositórios para armazenar código e permite a interação com seu código por meio do git cli;
+
+# CodeBuild
 
 O AWS CodeBuild atua como um ambiente/mecanismo de compilação e é usado para executar instruções em vários estágios, para criar e empacotar código na forma de um artefato utilizável;
 
+# CodeDeploy
+
 O AWS CodeDeploy é um serviço que automatiza a implantação de aplicativos em ambientes de servidores e serviços gerenciados da AWS. Ele ajuda a simplificar o processo de implantação, permitindo que você entregue seus aplicativos de forma confiável, rápida e consistente.
+
+# CodePipeline
 
 AWS CodePipeline é a estrutura de CI/CD que vincula os outros três serviços (assim como outros) por meio de Estágios executáveis.
 
@@ -35,10 +64,8 @@ Cada etapa do pipeline pode ser configurada para realizar ações específicas, 
 
 O CodePipeline oferece integração com outros serviços da AWS e ferramentas de terceiros, permitindo que você construa pipelines personalizados e flexíveis de acordo com suas necessidades. Além disso, ele fornece recursos de monitoramento e rastreamento para acompanhar o progresso do pipeline, notificações por e-mail e integração com serviços de gerenciamento de versão, como o AWS CodeCommit e o GitHub.
 
-Em resumo, o AWS CodePipeline é uma ferramenta de CI/CD que permite automatizar e gerenciar o fluxo de trabalho de entrega contínua para seus aplicativos, facilitando a implementação rápida e confiável de novas versões de software.
+O AWS CodePipeline é uma ferramenta de CI/CD que permite automatizar e gerenciar o fluxo de trabalho de entrega contínua para seus aplicativos, facilitando a implementação rápida e confiável de novas versões de software.
 
-
-Aqui estão links de referência de cada recurso caso você queira se aprofundar mais.
 
 Pré-requisitos
 Para que você consiga provisionar este serviço é necessário que você tenha em sua máquina os seguintes pré-requisitos:
@@ -52,6 +79,9 @@ https://www.python.org/downloads/
 - Conta AWS com usuário IAM com permissão de administrador;
 Criar conta AWS: https://aws.amazon.com/
 ID de chave de acesso: https://docs.aws.amazon.com/pt_br/powershell/latest/userguide/pstools-appendix-sign-up.html
+
+- AWS CLI install ;
+https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
 
 - Conta no Github e Token de autorização com permissão de criação e atualização de repositórios;
 https://github.com/ 
@@ -75,12 +105,11 @@ Para saber a versão do seu git basta dar o seguinte comando em seu prompt.
 git versão <versão atual>
 '''
 
-O código está estruturado da seguinte forma:
 
  
 
 Todo o código terraform para provisionar a infraestrutura está no arquivo main.tf.
-Na pasta python temos código da função lambda e na pasta modules temos o arquivo buildspec.yml que será utilizado na etapa de build do codepipeline.
+Na pasta python temos código da função lambda (não esqueça de zipar este arquivo) e na pasta modules temos o arquivo buildspec.yml que será utilizado na etapa de build do codepipeline.
 
 # Para rodar o projeto clone este repositório:
 https://github.com/ykarodeandrade/awsCodePipeline
@@ -93,9 +122,19 @@ Execute os seguintes comandos:
 
 ```
 terraform init
+
+```
+
+-> set suas credenciais da AWS via terminal ou no inicio da main.tf em provider
+
+```
+terraform init
 terraform plan
 terraform apply
 ```
+
+![Exemplo de imagem](imagens/applycompletoc.png)
+
 
 ### ATENÇÃO 
 Ao final de todo o projeto não esqueça de executar 
@@ -105,7 +144,9 @@ terraform destroy
 
 
 
-## Explicando agora de maneira aplicada ao contexto do projeto, o codepipeline em questão é constituído primeiramente da etapa do CodeCommit.
+## Explicando agora o contexto do projeto de maneira aplicada.  
+
+# Codepipeline em questão é constituído primeiramente da etapa do CodeCommit.
 
 
 # CodeCommit:
@@ -121,18 +162,34 @@ resource "aws_codecommit_repository" "my_repo" {
 
 ## Atenção
 
-Ao rodar a infraestrutura é necessário clonar o repositório criado em sua máquina. Pois inicialmente o repositório estará vazio. 
+Ao rodar a infraestrutura é necessário clonar o repositório criado no codecommit em sua máquina. Pois inicialmente o repositório estará vazio. 
 
 Para isso vá na sua conta da AWS e pesquise no console por *CodePipeline* .
+
 ![Exemplo de imagem](imagens/repositoriocriado.png)
 
-Lá foi criado um repositório chamado  *my-repositorio1* .
+Lá foi criado um repositório chamado  *my-repo* .
 
 Copie o link https gerado e clone normalmente em sua máquina.
 
-Será requisitado em sua máquina sua conta e senha da AWS para que seja sincronizado suas auterações ao repositório original.
+
+
 ![Exemplo de imagem](imagens/telapclone.png)
-### Você pode coloacar um código simples em python para que seja criado a branch master, que é a branch padrão.
+
+Será requisitado em sua máquina sua conta e senha da AWS para que sejam sincronizadas suas alterações ao repositório.
+
+## Se você não configurou sua máquina com codecommit da AWS, a seguinte solicitação irá aparecer quando você for dar git push:
+![Exemplo de imagem](imagens/pushcredencial.png)
+
+# Para achar essa informação devemos ir no console em Credenciais de segurança que está em IAM>usuario>(seu user):
+
+## Procure por: *Credenciais HTTPS do Git para o AWS CodeCommit* 
+
+![Exemplo de imagem](imagens/credencialparaaws.png)
+
+# Cole suas credenciais onde foram solicitadas e seu commit irá funcionar
+
+
 
 # Importante
 
@@ -141,7 +198,7 @@ Será requisitado em sua máquina sua conta e senha da AWS para que seja sincron
 
 
 Agora vamos subir um codigo via codecommit;
-
+### Você pode coloacar um código simples em python para que seja criado a branch master, que é a branch padrão.
 Através do repositório my-repositoy1 suba um codigo python, por exemplo;
 
 ``` 
@@ -153,18 +210,8 @@ def lambda_handler(event, context):
     }
 
 ```
-## Se você não configurou sua máquina com codecommit da AWS, a seguinte solicitação irá aparecer quando você for dar git push:
-![Exemplo de imagem](imagens/credencialpush.png)
 
-# Para achar essa informação devemos ir no console em Credenciais de segurança que está em IAM>usuario>(seu user):
-
-## Procure por: *Credenciais HTTPS do Git para o AWS CodeCommit* 
-
-![Exemplo de imagem](imagens/credencialparaaws.png)
-
-# Cole suas credenciais onde foram solicitadas e seu commit irá funcionar
-
-## Ao clonar o repositório cria e colocar um código vemos que uma nova branch foi criada apos git push:
+## Vemos que uma nova branch foi criada apos git push:
 ![Exemplo de imagem](imagens/gitpush.png)
 
 ## E ao atualizarmos o console no CodePipeline podemos obervar que o commit teve êxito:
@@ -177,49 +224,42 @@ def lambda_handler(event, context):
 
 Podemos pesquisar no console da AWS por CodeBuild e veremos que o serviço foi criado e se chama *my-project* .
 
+# O CodeBuild inicia automaticamnente após a etapa do CodeCommit.
+
 ![Exemplo de imagem](imagens/buildcriado.png)
 
-# Temos um porém
-## Ao observar esta etapa no CodePipeline observamos a etapa do CodeBuild não funcionou:
+# Aguarde um pouco
 
-![Exemplo de imagem](imagens/errobuild.png)
- 
- Mas podemos observar que output_artifacts da etapa de Clone é o input_artifacts da etapa de Build.
+![Exemplo de imagem](imagens/build02.png)
+
+![Exemplo de imagem](imagens/build03.png)
 
 
-## Ao clicar em action execution failed:
+# Codedeploy
+
+## Após a etapa de buil o deploy começa a carregar automaticamente
+
+![Exemplo de imagem](imagens/deploy01.png)
+
+# CodePipeline completo
+![Exemplo de imagem](imagens/pipeline01.png)
+
+![Exemplo de imagem](imagens/pipeline.png)
+
+
+# ################################
+
+# Observação:
+
+## A depender das configurações da sua conta AWS a etapa build pode falhar, tente rodar em outra conta.
 
 ![Exemplo de imagem](imagens/bugbuild.png)
+
+
 
 Ao pesquisar pelo erro tive obtive a seguinte informação que pode ser a causa da não conclusão desta etapa no CodePipeline:
 
 ![Exemplo de imagem](imagens/error.png)
 
-Ao que parece se trata de alguma configuração da conta. 
 
-### Infelizmente não fui capaz de resolver este bug a tempo da entrega para o dia 26/05, mas continuarei tentando solucionar o problema para garantir a etapa de build e o pipeline funcionar.
-
-
-# Garantias de que o código rodou em minha máquina
-## Terraform plan
-![Exemplo de imagem](imagens/plan.png)
-
-
-## Terraform apply
-![Exemplo de imagem](imagens/applycomplete.png)
-
-## Terraform destroy
-![Exemplo de imagem](imagens/destroy.png)
-
-## Outros serviços 
-
-![Exemplo de imagem](imagens/lambda.png)
-
-Foi enviado um email para os professores explicando sobre o erro na etapa de build que pode ser da conta AWS.
-
-# Agora de posse de uma conta com permissão para executar build
-![Exemplo de imagem](imagens/commitebuild.png)
-
-# CodeBuild Funciona
-
-![Exemplo de imagem](imagens/buildfunciona.png)
+# Agradecimentos especiais aos professores Rodolfo Avelino e Tiago Demay pelos ensinamentos compartilhados.
