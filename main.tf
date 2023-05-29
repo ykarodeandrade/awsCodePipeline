@@ -1,6 +1,6 @@
 provider "aws" {
  # access_key = "" # pode colocar as credenciais via set key
- # secret_key = "" # apague sua credencial logo depois de usar o código
+ # secret_key = "" # apague sua credencial logo
   region = "us-east-1"
 }
 
